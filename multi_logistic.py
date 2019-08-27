@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import MultiLabelBinarizer
-sns.set_style('darkgrid')
-%matplotlib inline
+#sns.set_style('darkgrid')
+#%matplotlib inline
 #train_data = Read_from_TestSet()
 from tqdm import tqdm
 tqdm.pandas(desc="progress-bar")
@@ -41,7 +41,7 @@ all_data = X_train + X_test
 model_dbow = Doc2Vec(dm=0, vector_size=300, negative=5, min_count=1, alpha=0.065, min_alpha=0.065)
 model_dbow.build_vocab([x for x in tqdm(all_data)])
 
-for epoch in range(5):
+for epoch in range(30):
     model_dbow.train(utils.shuffle([x for x in tqdm(all_data)]), total_examples=len(all_data), epochs=1)
     model_dbow.alpha -= 0.002
     model_dbow.min_alpha = model_dbow.alpha

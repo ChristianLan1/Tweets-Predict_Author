@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "tf_idf_logistic.py", line 1, in <module>
+    from test_set_read import Read_from_TestSet
+  File "/home/ubuntu/Tweets-Predict_Author/test_set_read.py", line 4, in <module>
+    from nltk.tokenize import word_tokenize, wordpunct_tokenize
+ImportError: No module named 'nltk'

@@ -20,7 +20,7 @@ from sklearn.metrics import accuracy_score
 train_data = Read_from_TestSet()
 test_data = Read_from_test_set_unlabelled()
 df = pd.DataFrame(train_data, columns=['author', 'text'])
-df_test = pd.DataFrame(test_data,columns=['test_text'])
+df_test= pd.DataFrame({'test_text':test_data})
 test_text = df_test['test_text']
 #train_data = np.array(train_data)
 #author

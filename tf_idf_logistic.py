@@ -58,14 +58,15 @@ vectorizer = TfidfVectorizer(stop_words="english",
 
 training_features = vectorizer.fit_transform(X_train)    
 test_features = vectorizer.transform(X_test)
-real_test_features = vectorizer.transform(test_text)
+#real_test_features = vectorizer.transform(test_text)
 
 classifier = LogisticRegression(n_jobs=1, C=1e5)
 #mlb = MultiLabelBinarizer()
 #Y_train1 = mlb.fit_transform(Y_train)
 #classifier = OneVsRestClassifier(LogisticRegression(n_jobs=1, C=1e5))
+print("start fitting")
 classifier.fit(training_features, Y_train)
-
+print("done fitting")
 
 
 #Y_test1 = mlb.transform(Y_test)

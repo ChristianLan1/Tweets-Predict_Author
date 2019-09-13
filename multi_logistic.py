@@ -8,6 +8,7 @@ from sklearn.preprocessing import MultiLabelBinarizer
 #sns.set_style('darkgrid')
 #%matplotlib inline
 #train_data = Read_from_TestSet()
+from nltk.stem import WordNetLemmatizer
 from tqdm import tqdm
 tqdm.pandas(desc="progress-bar")
 from gensim.models import Doc2Vec
@@ -16,6 +17,16 @@ import gensim
 from gensim.models.doc2vec import TaggedDocument
 import re
 from sklearn.model_selection import train_test_split
+import multiprocessing
+from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import LinearSVC
+from sklearn.metrics import accuracy_score, f1_score
+import nltk
+nltk.download('punkt')
+wordnet_lemmatizer = WordNetLemmatizer()
+from nltk.corpus import stopwords
+cores = multiprocessing.cpu_count()
 df = pd.read_csv('train_tweets.txt', header = None,sep='\t')
 #print(df)
 df.columns = ['author','text']
@@ -23,56 +34,77 @@ df.columns = ['author','text']
 author = df['author']
 text = df['text']
 
-def label_sentences(corpus, label_type):
-    """
-    Gensim's Doc2Vec implementation requires each document/paragraph to have a label associated with it.
-    We do this by using the TaggedDocument method. The format will be "TRAIN_i" or "TEST_i" where "i" is
-    a dummy index of the post.
-    """
-    labeled = []
-    for i, v in enumerate(corpus):
-        label = label_type + '_' + str(i)
-        labeled.append(TaggedDocument(v.split(), [label]))
-    return labeled
-X_train, X_test, y_train, y_test = train_test_split(text, author)
-X_train = label_sentences(X_train, 'Train')
-X_test = label_sentences(X_test, 'Test')
-all_data = X_train + X_test
-model_dbow = Doc2Vec(dm=0, vector_size=300, negative=5, min_count=1, alpha=0.065, min_alpha=0.065)
-model_dbow.build_vocab([x for x in tqdm(all_data)])
+
+train, test = train_test_split(df, test_size=0.1, random_state=90051)
+
+
+def tokenize_text(text):
+    tokens = []
+    for sent in nltk.sent_tokenize(text):
+        for word in nltk.word_tokenize(sent):
+            if len(word) < 2:
+                continue
+            word = re.sub(r'[:|,|)|(|\|/]','',word)
+            word = re.sub(r'[\'|"|]','',word)
+            word = re.sub('!+','!',word)
+            word = re.sub(r'\.+',r'.',word)
+            word = re.sub(r'\$+',r'$',word)
+            word = re.sub(r'\*+',r'*',word)
+            word = word.replace("http","")
+            if not word.isupper():
+                #print(word)
+                word = word.lower()
+            tokens.append(word)
+    tokens = [wordnet_lemmatizer.lemmatize(w) for w in tokens]
+    return tokens
+train_tagged = train.apply(
+    lambda r: TaggedDocument(words=tokenize_text(r['text']), tags=[r.author]), axis=1)
+test_tagged = test.apply(
+    lambda r: TaggedDocument(words=tokenize_text(r['text']), tags=[r.author]), axis=1)
+
+print(train_tagged[0])
+model_dbow = Doc2Vec(dm=0, vector_size=300, negative=5, min_count=15, alpha=0.065, min_alpha=0.065,hs=0,sample = 0, workers=cores)
+model_dbow.build_vocab([x for x in tqdm(train_tagged.values)])
 
 for epoch in range(30):
-    model_dbow.train(utils.shuffle([x for x in tqdm(all_data)]), total_examples=len(all_data), epochs=1)
+    model_dbow.train(utils.shuffle([x for x in tqdm(train_tagged.values)]), total_examples=len(train_tagged.values), epochs=1)
     model_dbow.alpha -= 0.002
     model_dbow.min_alpha = model_dbow.alpha
 
-def get_vectors(model, corpus_size, vectors_size, vectors_type):
-    """
-    Get vectors from trained doc2vec model
-    :param doc2vec_model: Trained Doc2Vec model
-    :param corpus_size: Size of the data
-    :param vectors_size: Size of the embedding vectors
-    :param vectors_type: Training or Testing vectors
-    :return: list of vectors
-    """
-    vectors = np.zeros((corpus_size, vectors_size))
-    for i in range(0, corpus_size):
-        prefix = vectors_type + '_' + str(i)
-        vectors[i] = model.docvecs[prefix]
-    return vectors
-    
-train_vectors_dbow = get_vectors(model_dbow, len(X_train), 300, 'Train')
-test_vectors_dbow = get_vectors(model_dbow, len(X_test), 300, 'Test')
 
-#mlb = MultiLabelBinarizer()
-#mlb.fit_transform(y_train)
-logreg = LogisticRegression(n_jobs=1, C=1e5)
-logreg.fit(train_vectors_dbow, y_train)
-logreg = logreg.fit(train_vectors_dbow, y_train)
-y_pred = logreg.predict(test_vectors_dbow)
-print('accuracy %s' % accuracy_score(y_pred, y_test))
-print(classification_report(y_test, y_pred,target_names=my_tags))
-f = open("demofile2.txt", "a")
-f.write('accuracy %s' % accuracy_score(y_pred, y_test))
-f.write(classification_report(y_test, y_pred,target_names=my_tags))
-f.close()
+
+def vec_for_learning(model, tagged_docs):
+    sents = tagged_docs.values
+    targets, regressors = zip(*[(doc.tags[0], model.infer_vector(doc.words, steps=20)) for doc in sents])
+    
+    return targets, regressors
+y_train, X_train = vec_for_learning(model_dbow, train_tagged)
+y_test, X_test = vec_for_learning(model_dbow, test_tagged)
+#print(X_train[:2])
+#logreg = OneVsRestClassifier(LinearSVC())
+logreg = LogisticRegression(n_jobs=1, C=1)
+logreg.fit(X_train, y_train)
+y_pred = logreg.predict(X_test)
+
+print('Testing accuracy %s' % accuracy_score(y_test, y_pred))
+print('Testing F1 score: {}'.format(f1_score(y_test, y_pred, average='weighted')))
+
+
+df = pd.read_csv('test_tweets_unlabeled.txt', header = None,sep='\t')
+df.columns = ['text']
+real_test_tagged = df['text'].apply(
+    lambda r: TaggedDocument(words=tokenize_text(r), tags=[1]))
+
+def vec_for_predict(model, tagged_docs):
+    sents = tagged_docs.values
+    regressors = [model.infer_vector(doc.words) for doc in sents]
+    return regressors
+
+X_test_real = vec_for_predict(model_dbow, real_test_tagged)
+
+Y_test_pred_output = logreg.predict(X_test_real)
+df = pd.DataFrame(Y_test_pred_output,columns=['Predicted'])
+df.index = df.index + 1
+df.index.name = 'Id'
+df.to_csv('doc2vec.csv')
+

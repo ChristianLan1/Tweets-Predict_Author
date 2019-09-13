@@ -1,7 +1,7 @@
 import pdb
 import zipfile
 import datetime
-from nltk.tokenize import word_tokenize, wordpunct_tokenize
+from nltk.tokenize import word_tokenize, wordpunct_tokenize,TweetTokenizer 
 #from collections import Counter,defaultdict
 import numpy as np
 ISOTIMEFORMAT = '%H:%M:%S'
@@ -10,7 +10,7 @@ def BM25_PREPROCESSING(Sentence):
     #Function to Tokecnize the sentence in to word, and also split punctuation
     #Remain the Capital words     
     New_line = []
-    words = wordpunct_tokenize(Sentence)     
+    words = TweetTokenizer().tokenize(Sentence)     
     return words
 
 def Read_from_TestSet():

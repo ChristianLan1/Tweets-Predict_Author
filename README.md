@@ -4,3 +4,4 @@ This project ranked 12/162 during the competition in kaggle. We used Tf-Idf to s
 is 32.226%
 
 /Python Scripts/ML_Scripts.py is the final version
+/Project Submission Folder/ has the detailed report for this project

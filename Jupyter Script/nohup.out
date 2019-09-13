@@ -1,0 +1,24 @@
+[nltk_data] Downloading package wordnet to /home/ubuntu/nltk_data...
+[nltk_data]   Package wordnet is already up-to-date!
+begin to read data files,time:06:56:11
+File Reading Finish,time:06:56:17
+(328932, 2)
+Traceback (most recent call last):
+  File "tf_idf_logistic.py", line 47, in <module>
+    df['text']=df.text.apply(lemmatize_text)
+  File "/usr/local/lib/python3.5/dist-packages/pandas/core/series.py", line 3591, in apply
+    mapped = lib.map_infer(values, f, convert=convert_dtype)
+  File "pandas/_libs/lib.pyx", line 2217, in pandas._libs.lib.map_infer
+  File "tf_idf_logistic.py", line 34, in lemmatize_text
+    return [wordnet_lemmatizer.lemmatize(w) for w in text]
+  File "tf_idf_logistic.py", line 34, in <listcomp>
+    return [wordnet_lemmatizer.lemmatize(w) for w in text]
+  File "/usr/local/lib/python3.5/dist-packages/nltk/stem/wordnet.py", line 41, in lemmatize
+    lemmas = wordnet._morphy(word, pos)
+  File "/usr/local/lib/python3.5/dist-packages/nltk/corpus/reader/wordnet.py", line 1909, in _morphy
+    forms = apply_rules([form])
+  File "/usr/local/lib/python3.5/dist-packages/nltk/corpus/reader/wordnet.py", line 1887, in apply_rules
+    for form in forms
+  File "/usr/local/lib/python3.5/dist-packages/nltk/corpus/reader/wordnet.py", line 1889, in <listcomp>
+    if form.endswith(old)
+KeyboardInterrupt
